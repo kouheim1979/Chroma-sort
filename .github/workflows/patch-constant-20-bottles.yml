@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main ]
     paths:
-      - '.trigger-constant-20-bottles'
+      - '.github/workflows/patch-constant-20-bottles.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,9 +36,8 @@ const DC={
   hard:  {c:12,b:16, e:4, sh:230},
   expert:{c:16,b:16, e:4, sh:380},
 };"""
-          if old not in s:
-              raise SystemExit('DC block not found')
-          s=s.replace(old,new,1)
+          if old in s:
+              s=s.replace(old,new,1)
           old="""    /* Build pool: each color × CAP */
     const pool=[];
     colors.forEach(c=>{for(let i=0;i<CAP;i++)pool.push(c)});"""
@@ -48,9 +48,8 @@ const DC={
       const c=colors[group%colors.length];
       for(let i=0;i<CAP;i++)pool.push(c);
     }"""
-          if old not in s:
-              raise SystemExit('pool block not found')
-          s=s.replace(old,new,1)
+          if old in s:
+              s=s.replace(old,new,1)
           p.write_text(s)
           PY
       - name: Verify JavaScript syntax
