@@ -78,6 +78,7 @@ body{
 #sd.easy    {background:rgba(40,200,255,.18); color:#55ddff}
 #sd.normal  {background:rgba(255,160,0,.20);  color:#ffcc55}
 #sd.hard    {background:rgba(255,60,20,.26);  color:#ff9966}
+#sd.expert  {background:rgba(180,60,255,.24); color:#ddaaff}
 #cpill{
   display:flex;align-items:center;gap:6px;
   background:rgba(255,180,0,.12);
@@ -268,6 +269,21 @@ body{
   z-index:2;
 }
 
+/* ── Color-symbol support ── */
+.bseg.sym::before{
+  content:attr(data-sym);
+  position:absolute;inset:0;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(var(--BW)*.34);font-weight:900;
+  color:rgba(255,255,255,.92);
+  text-shadow:0 2px 5px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.75);
+  pointer-events:none;
+}
+.bseg.sym.light::before{
+  color:rgba(0,0,0,.78);
+  text-shadow:0 1px 1px rgba(255,255,255,.50),0 0 4px rgba(255,255,255,.35);
+}
+
 /* Glass overlay: left bright → right dark = cylinder */
 .bglass{
   position:absolute;inset:0;z-index:3;
@@ -336,6 +352,7 @@ body{
 }
 .abtn:active{transform:scale(.91);box-shadow:0 2px 6px rgba(200,60,0,.4)}
 .abtn:disabled{opacity:.28;pointer-events:none}
+.abtn.on{background:linear-gradient(160deg,#7c5cff 0%,#3516b8 100%);box-shadow:0 4px 14px rgba(80,40,220,.55),inset 0 1px 0 rgba(255,255,255,.25)}
 .ai{font-size:22px;line-height:1}
 .al{font-size:9px;color:rgba(255,255,255,.75);margin-top:1px}
 .ac{font-size:8px;color:rgba(255,255,180,.80);margin-top:1px}
@@ -435,6 +452,9 @@ body{
     <button class="abtn" id="bxtra">
       <span class="ai">🧪</span><span class="al">+Bottle</span><span class="ac">-20🪙</span>
     </button>
+    <button class="abtn" id="bsym">
+      <span class="ai">🔣</span><span class="al">Symbol</span><span class="ac" id="symst">OFF</span>
+    </button>
   </footer>
 </div>
 
@@ -455,6 +475,15 @@ body{
     <h2 class="sttl">⚙️ 設定</h2>
     <div class="srow"><span class="slbl">🔊 サウンド</span><button class="tog on" id="ss">ON</button></div>
     <div class="srow"><span class="slbl">📳 バイブ</span><button class="tog on" id="sv">ON</button></div>
+    <div class="srow">
+      <span class="slbl">🎚️ 難易度</span>
+      <div class="bgrp" id="dgrp">
+        <button class="gbtn on" data-v="easy">EASY</button>
+        <button class="gbtn" data-v="normal">NORMAL</button>
+        <button class="gbtn" data-v="hard">HARD</button>
+        <button class="gbtn" data-v="expert">EXPERT</button>
+      </div>
+    </div>
     <div class="srow">
       <span class="slbl">🎨 テーマ</span>
       <div class="bgrp" id="tgrp">
@@ -489,35 +518,35 @@ const SPD={Slow:480,Normal:300,Fast:140};
 const CN=['red','blue','green','yellow','orange','cyan','purple','pink','gray','brown','lime','teal','cream','indigo','silver','lavender'];
 const CS={
   /* ── ウォーム系 ── */
-  red:     {bg:'linear-gradient(180deg,#ff3333,#bb0000)',gl:'#ff1111'}, /* 鮮やか赤 */
-  orange:  {bg:'linear-gradient(180deg,#ff9900,#cc5500)',gl:'#ff7700'}, /* 純オレンジ */
-  brown:   {bg:'linear-gradient(180deg,#cc6622,#884411)',gl:'#bb5511'}, /* 暖色ブラウン(橙より暗) */
-  yellow:  {bg:'linear-gradient(180deg,#ffee00,#ccaa00)',gl:'#ffdd00'}, /* 純黄 */
+  red:     {bg:'linear-gradient(180deg,#ff3333,#bb0000)',gl:'#ff1111',sym:'●',light:false}, /* 鮮やか赤 */
+  orange:  {bg:'linear-gradient(180deg,#ff9900,#cc5500)',gl:'#ff7700',sym:'▲',light:false}, /* 純オレンジ */
+  brown:   {bg:'linear-gradient(180deg,#cc6622,#884411)',gl:'#bb5511',sym:'⬟',light:false}, /* 暖色ブラウン(橙より暗) */
+  yellow:  {bg:'linear-gradient(180deg,#ffee00,#ccaa00)',gl:'#ffdd00',sym:'★',light:true}, /* 純黄 */
   /* ── グリーン系 (輝度差で色弱対応) ── */
-  lime:    {bg:'linear-gradient(180deg,#ccff00,#88bb00)',gl:'#bbff00'}, /* 明るい黄緑 */
-  green:   {bg:'linear-gradient(180deg,#00ee55,#009933)',gl:'#00ff44'}, /* 純緑(limeより青寄り) */
-  teal:    {bg:'linear-gradient(180deg,#00ffcc,#009977)',gl:'#00ffaa'}, /* 青緑 */
+  lime:    {bg:'linear-gradient(180deg,#ccff00,#88bb00)',gl:'#bbff00',sym:'✚',light:true}, /* 明るい黄緑 */
+  green:   {bg:'linear-gradient(180deg,#00ee55,#009933)',gl:'#00ff44',sym:'＋',light:false}, /* 純緑(limeより青寄り) */
+  teal:    {bg:'linear-gradient(180deg,#00ffcc,#009977)',gl:'#00ffaa',sym:'◇',light:false}, /* 青緑 */
   /* ── ブルー系 ── */
-  cyan:    {bg:'linear-gradient(180deg,#00aaff,#0066bb)',gl:'#00aaff'}, /* スカイブルー */
-  blue:    {bg:'linear-gradient(180deg,#3344ff,#0011cc)',gl:'#2233ff'}, /* 純青 */
-  indigo:  {bg:'linear-gradient(180deg,#7722ff,#4400bb)',gl:'#6611ff'}, /* 深紫-青 */
+  cyan:    {bg:'linear-gradient(180deg,#00aaff,#0066bb)',gl:'#00aaff',sym:'○',light:true}, /* スカイブルー */
+  blue:    {bg:'linear-gradient(180deg,#3344ff,#0011cc)',gl:'#2233ff',sym:'■',light:false}, /* 純青 */
+  indigo:  {bg:'linear-gradient(180deg,#7722ff,#4400bb)',gl:'#6611ff',sym:'⬢',light:false}, /* 深紫-青 */
   /* ── パープル系 ── */
-  purple:  {bg:'linear-gradient(180deg,#cc00ff,#8800cc)',gl:'#bb00ff'}, /* 鮮やか紫 */
-  lavender:{bg:'linear-gradient(180deg,#dd99ff,#9966cc)',gl:'#ccaaff'}, /* 薄紫(明るい) */
-  pink:    {bg:'linear-gradient(180deg,#ff44bb,#cc0066)',gl:'#ff22aa'}, /* ホットピンク */
+  purple:  {bg:'linear-gradient(180deg,#cc00ff,#8800cc)',gl:'#bb00ff',sym:'◆',light:false}, /* 鮮やか紫 */
+  lavender:{bg:'linear-gradient(180deg,#dd99ff,#9966cc)',gl:'#ccaaff',sym:'✿',light:true}, /* 薄紫(明るい) */
+  pink:    {bg:'linear-gradient(180deg,#ff44bb,#cc0066)',gl:'#ff22aa',sym:'♥',light:false}, /* ホットピンク */
   /* ── ニュートラル系 ── */
-  cream:   {bg:'linear-gradient(180deg,#fffff0,#eecc88)',gl:'#ffffff'}, /* クリーム白 */
-  gray:    {bg:'linear-gradient(180deg,#bbbbbb,#777777)',gl:'#aaaaaa'}, /* 暖色グレー */
-  silver:  {bg:'linear-gradient(180deg,#aaccee,#7799bb)',gl:'#99bbdd'}, /* 冷色シルバー */
+  cream:   {bg:'linear-gradient(180deg,#fffff0,#eecc88)',gl:'#ffffff',sym:'☀',light:true}, /* クリーム白 */
+  gray:    {bg:'linear-gradient(180deg,#bbbbbb,#777777)',gl:'#aaaaaa',sym:'×',light:true}, /* 暖色グレー */
+  silver:  {bg:'linear-gradient(180deg,#aaccee,#7799bb)',gl:'#99bbdd',sym:'✦',light:true}, /* 冷色シルバー */
 };
-/* 全ステージ14色×18本 — 難易度はシャッフル量のみ変化 */
+/* 難易度ごとに使用色数と空ボトル数を変更 */
 const DC={
-  beginner:{c:16,b:16,e:4,sh:18},
-  easy:    {c:16,b:16,e:4,sh:60},
-  normal:  {c:16,b:16,e:4,sh:160},
-  hard:    {c:16,b:16,e:4,sh:380},
+  easy:  {c:4, b:4, e:2, sh:60},
+  normal:{c:8, b:8, e:2, sh:130},
+  hard:  {c:12,b:12,e:3, sh:230},
+  expert:{c:16,b:16,e:4, sh:380},
 };
-const DORD=['beginner','easy','normal','hard'];
+const DORD=['easy','normal','hard','expert'];
 
 /* ================================================================
    RNG  (Mulberry32)
@@ -537,7 +566,7 @@ class RNG{
    STORAGE
    ================================================================ */
 class Store{
-  static G='ws6g';static S='ws6s';
+  static G='ws7g';static S='ws7s';
   static sg(d){try{localStorage.setItem(this.G,JSON.stringify(d))}catch(e){}}
   static lg(){try{const r=localStorage.getItem(this.G);return r?JSON.parse(r):null}catch(e){return null}}
   static cg(){try{localStorage.removeItem(this.G)}catch(e){}}
@@ -550,7 +579,7 @@ class Store{
    ================================================================ */
 class Cfg{
   #d;
-  constructor(){this.#d={sound:true,vib:true,theme:'navy',spd:'Normal',...(Store.ls()||{})}}
+  constructor(){this.#d={sound:true,vib:true,theme:'navy',spd:'Normal',diff:'easy',sym:false,...(Store.ls()||{})};if(!DORD.includes(this.#d.diff))this.#d.diff='easy'}
   get(k){return this.#d[k]}
   set(k,v){this.#d[k]=v;Store.ss(this.#d)}
   all(){return{...this.#d}}
@@ -624,19 +653,14 @@ class Btl{
    STAGE  —  Fisher-Yates shuffle generation + fixed-stage lookup
    ================================================================ */
 class Stage{
-  /* Difficulty name from stage number */
-  static diff(n){
-    if(n<=5) return'beginner';
-    if(n<=10)return'easy';
-    if(n<=15)return'normal';
-    return'hard';
-  }
+  static norm(d){return DORD.includes(d)?d:'easy'}
   static label(d){
-    return{beginner:'BEGINNER',easy:'EASY',normal:'NORMAL',hard:'HARD'}[d]||'BEGINNER';
+    return{easy:'EASY',normal:'NORMAL',hard:'HARD',expert:'EXPERT'}[Stage.norm(d)]||'EASY';
   }
 
   /* Core generator: pool shuffle (Fisher-Yates) */
   static createMixedStage(diff,seed){
+    diff=Stage.norm(diff);
     const cfg=DC[diff],rng=new RNG(seed);
     const colors=CN.slice(0,cfg.c);
     /* Build pool: each color × CAP */
@@ -674,12 +698,11 @@ class Stage{
     return Stage.createMixedStage(diff,seed).map(s=>new Btl(s));
   }
 
-  /* Load a stage: fixed data for 1-20, random generation beyond */
-  static load(n){
-    /* 全ステージ: 難易度に応じたシャッフル量でgen()生成 */
-    const diff=Stage.diff(n);
+  /* Load a stage using selected difficulty */
+  static load(n,diff='easy'){
+    diff=Stage.norm(diff);
     /* 固定シード(再現性のため) */
-    const seed=((n*7919+31337)^(n*n*13))&0xFFFFFF;
+    const seed=((n*7919+31337)^(n*n*13)^(DC[diff].c*1009))&0xFFFFFF;
     return Stage.gen(diff,seed);
   }
 }
@@ -712,7 +735,7 @@ class Hint{
    GAME STATE
    ================================================================ */
 class GS{
-  lv=1;coins=IC;sel=null;
+  lv=1;coins=IC;sel=null;diff='easy';
   btls=[];init=[];hist=[];
   xc=0;hints=new Set();
 
@@ -731,9 +754,10 @@ class GS{
     this.btls=this.init.map(b=>b.clone());
     this.xc=0;this.hist=[];this.sel=null;this.hints.clear();
   }
-  load(n){
-    const b=Stage.load(n);
-    this.lv=n;this.btls=b;this.init=b.map(b=>b.clone());
+  load(n,diff=this.diff){
+    diff=Stage.norm(diff);
+    const b=Stage.load(n,diff);
+    this.lv=n;this.diff=diff;this.btls=b;this.init=b.map(b=>b.clone());
     this.xc=0;this.hist=[];this.sel=null;this.hints.clear();
   }
   move(fi,ti){
@@ -756,7 +780,7 @@ class GS{
   }
   toJ(){
     return{
-      lv:this.lv,coins:this.coins,
+      lv:this.lv,coins:this.coins,diff:this.diff,
       btls:this.btls.map(b=>b.json()),
       init:this.init.map(b=>b.json()),
       xc:this.xc,
@@ -765,7 +789,7 @@ class GS{
   }
   static fromJ(d){
     const g=new GS();
-    g.lv=d.lv;g.coins=d.coins;
+    g.lv=d.lv;g.coins=d.coins;g.diff=Stage.norm(d.diff||'easy');
     g.btls=d.btls.map(s=>new Btl(s));
     g.init=d.init.map(s=>new Btl(s));
     g.xc=d.xc??0;
@@ -904,17 +928,17 @@ class Ren{
   render(){this.#hdr();this.#grid();this.#ftr()}
 
   #hdr(){
-    const d=Stage.diff(this.#g.lv);
+    const d=this.#g.diff;
     document.getElementById('sn').textContent=`Stage ${this.#g.lv}`;
     const b=document.getElementById('sd');
-    b.textContent=Stage.label(d);b.className=d;
+    b.textContent=`${Stage.label(d)} / ${DC[d].c}色`;b.className=d;
     document.getElementById('cv').textContent=this.#g.coins;
   }
 
   #grid(){
     const g=document.getElementById('grid');
     const n=this.#g.btls.length;
-    const cols=5; /* 18本→5列×4行 */
+    const cols=n<=6?3:n<=10?4:5; /* 難易度に応じて列数を調整 */
     const rows=Math.ceil(n/cols);
     g.style.gridTemplateColumns=`repeat(${cols},1fr)`;
 
@@ -974,7 +998,13 @@ class Ren{
     for(let i=0;i<CAP;i++){
       const s=document.createElement('div');s.className='bseg';
       if(i<segs.length){
-        s.style.background=CS[segs[i]].bg;
+        const c=CS[segs[i]];
+        s.style.background=c.bg;
+        if(this.#cfg.get('sym')){
+s.classList.add('sym');
+if(c.light)s.classList.add('light');
+s.dataset.sym=c.sym;
+        }
         if(i>0&&segs[i]!==segs[i-1])s.classList.add('sep');
       }
       liq.appendChild(s);
@@ -992,6 +1022,13 @@ class Ren{
     document.getElementById('bundo').disabled =!this.#g.hist.length;
     document.getElementById('bhint').disabled =this.#g.coins<HCOST;
     document.getElementById('bxtra').disabled =this.#g.coins<XCOST||this.#g.xc>=MAXX;
+    const sym=document.getElementById('bsym');
+    const symst=document.getElementById('symst');
+    if(sym&&symst){
+      const on=this.#cfg.get('sym');
+      symst.textContent=on?'ON':'OFF';
+      sym.classList.toggle('on',!!on);
+    }
   }
 
   el(i){return document.querySelector(`.btl[data-i="${i}"]`)}
@@ -1004,6 +1041,10 @@ class Ren{
     sv.textContent=s.vib?'ON':'OFF';sv.className='tog'+(s.vib?' on':'');
     document.querySelectorAll('#tgrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
     document.querySelectorAll('#agrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.spd));
+    document.querySelectorAll('#dgrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.diff));
+    const sym=document.getElementById('bsym');
+    const symst=document.getElementById('symst');
+    if(sym&&symst){symst.textContent=s.sym?'ON':'OFF';sym.classList.toggle('on',!!s.sym)}
   }
 }
 
@@ -1051,10 +1092,14 @@ class App{
   #ld(){
     const sv=Store.lg();
     if(sv){
-      try{this.#g=GS.fromJ(sv);this.#r=new Ren(this.#g,this.#cfg);return}
+      try{
+        this.#g=GS.fromJ(sv);
+        this.#cfg.set('diff',this.#g.diff);
+        this.#r=new Ren(this.#g,this.#cfg);return
+      }
       catch(e){console.warn('restore failed:',e)}
     }
-    this.#g.load(1);
+    this.#g.load(1,this.#cfg.get('diff'));
   }
   #sv(){Store.sg(this.#g.toJ())}
 
@@ -1083,6 +1128,7 @@ class App{
     on('brest', ()=>this.#restart());
     on('bhint', ()=>this.#hint());
     on('bxtra', ()=>this.#extra());
+    on('bsym',  ()=>this.#toggleSym());
     on('bcfg',  ()=>this.#openS());
     on('ss',    ()=>{this.#cfg.set('sound',!this.#cfg.get('sound'));this.#r.rSet()});
     on('sv',    ()=>{this.#cfg.set('vib',  !this.#cfg.get('vib')); this.#r.rSet()});
@@ -1098,6 +1144,13 @@ class App{
       this.#cfg.set('spd',b.dataset.v);
       document.documentElement.style.setProperty('--dur',`${SPD[b.dataset.v]}ms`);
       this.#r.rSet();
+    }));
+    document.querySelectorAll('#dgrp .gbtn').forEach(b=>b.addEventListener('click',()=>{
+      const diff=b.dataset.v;
+      if(this.#cfg.get('diff')===diff)return;
+      this.#cfg.set('diff',diff);
+      this.#g.load(1,diff);
+      this.#r.render();this.#r.rSet();this.#an.fin();this.#sv();
     }));
   }
 
@@ -1183,8 +1236,13 @@ class App{
   }
   #next(){
     document.getElementById('mclear').classList.add('hidden');
-    this.#g.load(this.#g.lv+1);
+    this.#g.load(this.#g.lv+1,this.#cfg.get('diff'));
     this.#r.render();this.#an.fin();this.#sv();
+  }
+
+  #toggleSym(){
+    this.#cfg.set('sym',!this.#cfg.get('sym'));
+    this.#r.render();this.#r.rSet();
   }
 
   #openS(){this.#r.rSet();document.getElementById('mset').classList.remove('hidden')}
@@ -1192,8 +1250,9 @@ class App{
 
   #reset(){
     if(!confirm('すべてのデータを初期化しますか？'))return;
-    Store.cg();this.#g=new GS();this.#g.load(1);
+    Store.cg();this.#g=new GS();
     this.#r=new Ren(this.#g,this.#cfg);
+    this.#g.load(1,this.#cfg.get('diff'));
     this.#cls();this.#r.render();this.#an.fin();
   }
   #vib(p){if(!this.#cfg.get('vib')||!navigator.vibrate)return;try{navigator.vibrate(p)}catch(e){}}
