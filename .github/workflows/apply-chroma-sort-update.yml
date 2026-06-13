@@ -1,0 +1,286 @@
+name: Apply Chroma Sort update
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/apply-chroma-sort-update.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    if: ${{ !contains(github.event.head_commit.message, 'Apply difficulty selection and symbol toggle') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          def rep(a,b):
+              global s
+              if a not in s:
+                  print('skip missing:', a[:60])
+                  return
+              s=s.replace(a,b,1)
+          # CSS: expert badge and footer symbol-button active state
+          rep("#sd.hard    {background:rgba(255,60,20,.26);  color:#ff9966}", "#sd.hard    {background:rgba(255,60,20,.26);  color:#ff9966}\n#sd.expert  {background:rgba(180,60,255,.24); color:#ddaaff}")
+          rep(".abtn:disabled{opacity:.28;pointer-events:none}", ".abtn:disabled{opacity:.28;pointer-events:none}\n.abtn.on{background:linear-gradient(160deg,#7c5cff 0%,#3516b8 100%);box-shadow:0 4px 14px rgba(80,40,220,.55),inset 0 1px 0 rgba(255,255,255,.25)}")
+          rep("/* Glass overlay: left bright → right dark = cylinder */\n.bglass{", """/* ── Color-symbol support ── */
+.bseg.sym::before{
+  content:attr(data-sym);
+  position:absolute;inset:0;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(var(--BW)*.34);font-weight:900;
+  color:rgba(255,255,255,.92);
+  text-shadow:0 2px 5px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.75);
+  pointer-events:none;
+}
+.bseg.sym.light::before{
+  color:rgba(0,0,0,.78);
+  text-shadow:0 1px 1px rgba(255,255,255,.50),0 0 4px rgba(255,255,255,.35);
+}
+
+/* Glass overlay: left bright → right dark = cylinder */
+.bglass{""")
+          # Footer symbol toggle button
+          old="""    <button class=\"abtn\" id=\"bxtra\">
+      <span class=\"ai\">🧪</span><span class=\"al\">+Bottle</span><span class=\"ac\">-20🪙</span>
+    </button>"""
+          new=old+"""
+    <button class=\"abtn\" id=\"bsym\">
+      <span class=\"ai\">🔣</span><span class=\"al\">Symbol</span><span class=\"ac\" id=\"symst\">OFF</span>
+    </button>"""
+          rep(old,new)
+          # Settings difficulty selector
+          old="""    <div class=\"srow\"><span class=\"slbl\">🔊 サウンド</span><button class=\"tog on\" id=\"ss\">ON</button></div>
+    <div class=\"srow\"><span class=\"slbl\">📳 バイブ</span><button class=\"tog on\" id=\"sv\">ON</button></div>"""
+          new=old+"""
+    <div class=\"srow\">
+      <span class=\"slbl\">🎚️ 難易度</span>
+      <div class=\"bgrp\" id=\"dgrp\">
+        <button class=\"gbtn on\" data-v=\"easy\">EASY</button>
+        <button class=\"gbtn\" data-v=\"normal\">NORMAL</button>
+        <button class=\"gbtn\" data-v=\"hard\">HARD</button>
+        <button class=\"gbtn\" data-v=\"expert\">EXPERT</button>
+      </div>
+    </div>"""
+          rep(old,new)
+          # Color metadata: symbol and light/dark symbol rendering
+          for a,b in {
+          "red:     {bg:'linear-gradient(180deg,#ff3333,#bb0000)',gl:'#ff1111'},":"red:     {bg:'linear-gradient(180deg,#ff3333,#bb0000)',gl:'#ff1111',sym:'●',light:false},",
+          "orange:  {bg:'linear-gradient(180deg,#ff9900,#cc5500)',gl:'#ff7700'},":"orange:  {bg:'linear-gradient(180deg,#ff9900,#cc5500)',gl:'#ff7700',sym:'▲',light:false},",
+          "brown:   {bg:'linear-gradient(180deg,#cc6622,#884411)',gl:'#bb5511'},":"brown:   {bg:'linear-gradient(180deg,#cc6622,#884411)',gl:'#bb5511',sym:'⬟',light:false},",
+          "yellow:  {bg:'linear-gradient(180deg,#ffee00,#ccaa00)',gl:'#ffdd00'},":"yellow:  {bg:'linear-gradient(180deg,#ffee00,#ccaa00)',gl:'#ffdd00',sym:'★',light:true},",
+          "lime:    {bg:'linear-gradient(180deg,#ccff00,#88bb00)',gl:'#bbff00'},":"lime:    {bg:'linear-gradient(180deg,#ccff00,#88bb00)',gl:'#bbff00',sym:'✚',light:true},",
+          "green:   {bg:'linear-gradient(180deg,#00ee55,#009933)',gl:'#00ff44'},":"green:   {bg:'linear-gradient(180deg,#00ee55,#009933)',gl:'#00ff44',sym:'＋',light:false},",
+          "teal:    {bg:'linear-gradient(180deg,#00ffcc,#009977)',gl:'#00ffaa'},":"teal:    {bg:'linear-gradient(180deg,#00ffcc,#009977)',gl:'#00ffaa',sym:'◇',light:false},",
+          "cyan:    {bg:'linear-gradient(180deg,#00aaff,#0066bb)',gl:'#00aaff'},":"cyan:    {bg:'linear-gradient(180deg,#00aaff,#0066bb)',gl:'#00aaff',sym:'○',light:true},",
+          "blue:    {bg:'linear-gradient(180deg,#3344ff,#0011cc)',gl:'#2233ff'},":"blue:    {bg:'linear-gradient(180deg,#3344ff,#0011cc)',gl:'#2233ff',sym:'■',light:false},",
+          "indigo:  {bg:'linear-gradient(180deg,#7722ff,#4400bb)',gl:'#6611ff'},":"indigo:  {bg:'linear-gradient(180deg,#7722ff,#4400bb)',gl:'#6611ff',sym:'⬢',light:false},",
+          "purple:  {bg:'linear-gradient(180deg,#cc00ff,#8800cc)',gl:'#bb00ff'},":"purple:  {bg:'linear-gradient(180deg,#cc00ff,#8800cc)',gl:'#bb00ff',sym:'◆',light:false},",
+          "lavender:{bg:'linear-gradient(180deg,#dd99ff,#9966cc)',gl:'#ccaaff'},":"lavender:{bg:'linear-gradient(180deg,#dd99ff,#9966cc)',gl:'#ccaaff',sym:'✿',light:true},",
+          "pink:    {bg:'linear-gradient(180deg,#ff44bb,#cc0066)',gl:'#ff22aa'},":"pink:    {bg:'linear-gradient(180deg,#ff44bb,#cc0066)',gl:'#ff22aa',sym:'♥',light:false},",
+          "cream:   {bg:'linear-gradient(180deg,#fffff0,#eecc88)',gl:'#ffffff'},":"cream:   {bg:'linear-gradient(180deg,#fffff0,#eecc88)',gl:'#ffffff',sym:'☀',light:true},",
+          "gray:    {bg:'linear-gradient(180deg,#bbbbbb,#777777)',gl:'#aaaaaa'},":"gray:    {bg:'linear-gradient(180deg,#bbbbbb,#777777)',gl:'#aaaaaa',sym:'×',light:true},",
+          "silver:  {bg:'linear-gradient(180deg,#aaccee,#7799bb)',gl:'#99bbdd'},":"silver:  {bg:'linear-gradient(180deg,#aaccee,#7799bb)',gl:'#99bbdd',sym:'✦',light:true},",
+          }.items():
+              rep(a,b)
+          # Difficulty config
+          rep("""/* 全ステージ14色×18本 — 難易度はシャッフル量のみ変化 */
+const DC={
+  beginner:{c:16,b:16,e:4,sh:18},
+  easy:    {c:16,b:16,e:4,sh:60},
+  normal:  {c:16,b:16,e:4,sh:160},
+  hard:    {c:16,b:16,e:4,sh:380},
+};
+const DORD=['beginner','easy','normal','hard'];""", """/* 難易度ごとに使用色数と空ボトル数を変更 */
+const DC={
+  easy:  {c:4, b:4, e:2, sh:60},
+  normal:{c:8, b:8, e:2, sh:130},
+  hard:  {c:12,b:12,e:3, sh:230},
+  expert:{c:16,b:16,e:4, sh:380},
+};
+const DORD=['easy','normal','hard','expert'];""")
+          # New storage key because saved boards from previous schema are incompatible
+          rep("static G='ws6g';static S='ws6s';", "static G='ws7g';static S='ws7s';")
+          rep("constructor(){this.#d={sound:true,vib:true,theme:'navy',spd:'Normal',...(Store.ls()||{})}}", "constructor(){this.#d={sound:true,vib:true,theme:'navy',spd:'Normal',diff:'easy',sym:false,...(Store.ls()||{})};if(!DORD.includes(this.#d.diff))this.#d.diff='easy'}")
+          # Stage class: selected difficulty, not stage-number difficulty
+          rep("""class Stage{
+  /* Difficulty name from stage number */
+  static diff(n){
+    if(n<=5) return'beginner';
+    if(n<=10)return'easy';
+    if(n<=15)return'normal';
+    return'hard';
+  }
+  static label(d){
+    return{beginner:'BEGINNER',easy:'EASY',normal:'NORMAL',hard:'HARD'}[d]||'BEGINNER';
+  }
+
+  /* Core generator: pool shuffle (Fisher-Yates) */
+  static createMixedStage(diff,seed){""", """class Stage{
+  static norm(d){return DORD.includes(d)?d:'easy'}
+  static label(d){
+    return{easy:'EASY',normal:'NORMAL',hard:'HARD',expert:'EXPERT'}[Stage.norm(d)]||'EASY';
+  }
+
+  /* Core generator: pool shuffle (Fisher-Yates) */
+  static createMixedStage(diff,seed){""")
+          rep("const cfg=DC[diff],rng=new RNG(seed);", "diff=Stage.norm(diff);\n    const cfg=DC[diff],rng=new RNG(seed);")
+          rep("""  /* Load a stage: fixed data for 1-20, random generation beyond */
+  static load(n){
+    /* 全ステージ: 難易度に応じたシャッフル量でgen()生成 */
+    const diff=Stage.diff(n);
+    /* 固定シード(再現性のため) */
+    const seed=((n*7919+31337)^(n*n*13))&0xFFFFFF;
+    return Stage.gen(diff,seed);
+  }
+}""", """  /* Load a stage using selected difficulty */
+  static load(n,diff='easy'){
+    diff=Stage.norm(diff);
+    /* 固定シード(再現性のため) */
+    const seed=((n*7919+31337)^(n*n*13)^(DC[diff].c*1009))&0xFFFFFF;
+    return Stage.gen(diff,seed);
+  }
+}""")
+          # Game state stores difficulty
+          rep("class GS{\n  lv=1;coins=IC;sel=null;", "class GS{\n  lv=1;coins=IC;sel=null;diff='easy';")
+          rep("""  load(n){
+    const b=Stage.load(n);
+    this.lv=n;this.btls=b;this.init=b.map(b=>b.clone());""", """  load(n,diff=this.diff){
+    diff=Stage.norm(diff);
+    const b=Stage.load(n,diff);
+    this.lv=n;this.diff=diff;this.btls=b;this.init=b.map(b=>b.clone());""")
+          rep("lv:this.lv,coins:this.coins,\n      btls", "lv:this.lv,coins:this.coins,diff:this.diff,\n      btls")
+          rep("g.lv=d.lv;g.coins=d.coins;\n    g.btls", "g.lv=d.lv;g.coins=d.coins;g.diff=Stage.norm(d.diff||'easy');\n    g.btls")
+          # Header and grid adapt to selected difficulty
+          rep("""const d=Stage.diff(this.#g.lv);
+    document.getElementById('sn').textContent=`Stage ${this.#g.lv}`;""", """const d=this.#g.diff;
+    document.getElementById('sn').textContent=`Stage ${this.#g.lv}`;""")
+          rep("b.textContent=Stage.label(d);b.className=d;", "b.textContent=`${Stage.label(d)} / ${DC[d].c}色`;b.className=d;")
+          rep("const cols=5; /* 18本→5列×4行 */", "const cols=n<=6?3:n<=10?4:5; /* 難易度に応じて列数を調整 */")
+          # Segment symbols
+          rep("""      if(i<segs.length){
+        s.style.background=CS[segs[i]].bg;
+        if(i>0&&segs[i]!==segs[i-1])s.classList.add('sep');
+      }""", """      if(i<segs.length){
+        const c=CS[segs[i]];
+        s.style.background=c.bg;
+        if(this.#cfg.get('sym')){
+          s.classList.add('sym');
+          if(c.light)s.classList.add('light');
+          s.dataset.sym=c.sym;
+        }
+        if(i>0&&segs[i]!==segs[i-1])s.classList.add('sep');
+      }""")
+          # Footer and settings state rendering
+          rep("""  #ftr(){
+    document.getElementById('bundo').disabled =!this.#g.hist.length;
+    document.getElementById('bhint').disabled =this.#g.coins<HCOST;
+    document.getElementById('bxtra').disabled =this.#g.coins<XCOST||this.#g.xc>=MAXX;
+  }""", """  #ftr(){
+    document.getElementById('bundo').disabled =!this.#g.hist.length;
+    document.getElementById('bhint').disabled =this.#g.coins<HCOST;
+    document.getElementById('bxtra').disabled =this.#g.coins<XCOST||this.#g.xc>=MAXX;
+    const sym=document.getElementById('bsym');
+    const symst=document.getElementById('symst');
+    if(sym&&symst){
+      const on=this.#cfg.get('sym');
+      symst.textContent=on?'ON':'OFF';
+      sym.classList.toggle('on',!!on);
+    }
+  }""")
+          rep("""    document.querySelectorAll('#tgrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
+    document.querySelectorAll('#agrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.spd));
+  }""", """    document.querySelectorAll('#tgrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
+    document.querySelectorAll('#agrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.spd));
+    document.querySelectorAll('#dgrp .gbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===s.diff));
+    const sym=document.getElementById('bsym');
+    const symst=document.getElementById('symst');
+    if(sym&&symst){symst.textContent=s.sym?'ON':'OFF';sym.classList.toggle('on',!!s.sym)}
+  }""")
+          # App load and binding
+          rep("""  #ld(){
+    const sv=Store.lg();
+    if(sv){
+      try{this.#g=GS.fromJ(sv);this.#r=new Ren(this.#g,this.#cfg);return}
+      catch(e){console.warn('restore failed:',e)}
+    }
+    this.#g.load(1);
+  }""", """  #ld(){
+    const sv=Store.lg();
+    if(sv){
+      try{
+        this.#g=GS.fromJ(sv);
+        this.#cfg.set('diff',this.#g.diff);
+        this.#r=new Ren(this.#g,this.#cfg);return
+      }
+      catch(e){console.warn('restore failed:',e)}
+    }
+    this.#g.load(1,this.#cfg.get('diff'));
+  }""")
+          rep("on('bxtra', ()=>this.#extra());\n    on('bcfg',  ()=>this.#openS());", "on('bxtra', ()=>this.#extra());\n    on('bsym',  ()=>this.#toggleSym());\n    on('bcfg',  ()=>this.#openS());")
+          rep("""    document.querySelectorAll('#agrp .gbtn').forEach(b=>b.addEventListener('click',()=>{
+      this.#cfg.set('spd',b.dataset.v);
+      document.documentElement.style.setProperty('--dur',`${SPD[b.dataset.v]}ms`);
+      this.#r.rSet();
+    }));
+  }""", """    document.querySelectorAll('#agrp .gbtn').forEach(b=>b.addEventListener('click',()=>{
+      this.#cfg.set('spd',b.dataset.v);
+      document.documentElement.style.setProperty('--dur',`${SPD[b.dataset.v]}ms`);
+      this.#r.rSet();
+    }));
+    document.querySelectorAll('#dgrp .gbtn').forEach(b=>b.addEventListener('click',()=>{
+      const diff=b.dataset.v;
+      if(this.#cfg.get('diff')===diff)return;
+      this.#cfg.set('diff',diff);
+      this.#g.load(1,diff);
+      this.#r.render();this.#r.rSet();this.#an.fin();this.#sv();
+    }));
+  }""")
+          rep("""  #next(){
+    document.getElementById('mclear').classList.add('hidden');
+    this.#g.load(this.#g.lv+1);
+    this.#r.render();this.#an.fin();this.#sv();
+  }
+
+  #openS(){this.#r.rSet();document.getElementById('mset').classList.remove('hidden')}""", """  #next(){
+    document.getElementById('mclear').classList.add('hidden');
+    this.#g.load(this.#g.lv+1,this.#cfg.get('diff'));
+    this.#r.render();this.#an.fin();this.#sv();
+  }
+
+  #toggleSym(){
+    this.#cfg.set('sym',!this.#cfg.get('sym'));
+    this.#r.render();this.#r.rSet();
+  }
+
+  #openS(){this.#r.rSet();document.getElementById('mset').classList.remove('hidden')}""")
+          rep("""Store.cg();this.#g=new GS();this.#g.load(1);
+    this.#r=new Ren(this.#g,this.#cfg);""", """Store.cg();this.#g=new GS();
+    this.#r=new Ren(this.#g,this.#cfg);
+    this.#g.load(1,this.#cfg.get('diff'));""")
+          p.write_text(s)
+          PY
+      - name: Verify JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.split('<script>',1)[1].split('</script>',1)[0]
+          Path('check.js').write_text(js)
+          PY
+          node --check check.js
+      - name: Commit patched index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Apply difficulty selection and symbol toggle" || exit 0
+          git push
